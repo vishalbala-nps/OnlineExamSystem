@@ -314,11 +314,10 @@ async function renderExamDetail(id) {
     const table = $("exam-detail-questions");
     table.replaceChildren();
     if (pool.length === 0) {
-        table.append(emptyRow(4, "The pool is empty. Add questions below."));
+        table.append(emptyRow(3, "The pool is empty. Add questions below."));
     }
     for (const question of pool) {
         table.append(el("tr", {},
-            el("td", { class: "num" }, String(question.id)),
             el("td", {}, question.text),
             el("td", {}, question.correct + ". " + question["option" + question.correct]),
             el("td", { class: "actions" },
@@ -333,7 +332,7 @@ async function renderExamDetail(id) {
     const select = $("assign-question");
     select.replaceChildren();
     for (const question of available) {
-        select.append(el("option", { value: question.id }, "#" + question.id + "  " + question.text));
+        select.append(el("option", { value: question.id }, question.text));
     }
     $("assign-form").hidden = available.length === 0;
     $("assign-empty").hidden = available.length > 0;
@@ -476,15 +475,21 @@ async function renderResults(examId) {
         const average = submitted.reduce((sum, r) => sum + (r.total ? r.score / r.total : 0), 0) / submitted.length;
         summary += " · average score " + Math.round(average * 100) + "%";
     }
+    if (!filter.value && rows.length > 0) {
+        summary += " · ranks are within each exam";
+    }
     $("result-summary").textContent = summary;
 
     const table = $("result-table");
     table.replaceChildren();
     if (rows.length === 0) {
-        table.append(emptyRow(5, "No students have taken this exam yet."));
+        table.append(emptyRow(6, "No students have taken this exam yet."));
     }
+    // Rows arrive grouped by exam with the best score first, so the order is already the rank list
     for (const result of rows) {
         table.append(el("tr", {},
+            el("td", { class: "rank" + (result.rank !== null && result.rank <= 3 ? " top" : "") },
+                result.rank === null ? "—" : "#" + result.rank),
             el("td", {}, result.username),
             el("td", {}, el("a", { class: "cell-link", href: "#/exams/" + result.examId }, result.examTitle)),
             el("td", { class: "num" }, result.open ? "—" : result.score + " / " + result.total),
@@ -507,6 +512,7 @@ async function renderAttemptReview(attemptId) {
     $("attempt-review-back").href = "#/results/" + result.examId;
     $("attempt-review-title").textContent = result.username + " · " + result.examTitle;
     $("attempt-review-score").textContent = result.open ? "—" : result.score + " / " + result.total;
+    $("attempt-review-rank").textContent = result.rank === null ? "—" : "#" + result.rank;
     const status = $("attempt-review-status");
     status.className = "pill " + (result.open ? "info" : "ok");
     status.textContent = result.open ? "In progress" : "Submitted";
@@ -659,16 +665,14 @@ $("back-to-exams").addEventListener("click", handle(showStudentExams));
 $("result-back").addEventListener("click", handle(showStudentExams));
 
 $("close-exam").addEventListener("click", handle(async () => {
-    const total = attempt.questionIds.length;
     const unanswered = attempt.questionIds.filter((id) => !attempt.questions[id].chosen).length;
     const warning = unanswered > 0 ? unanswered + " question(s) are unanswered and will score 0. " : "";
     if (!confirm(warning + "Submit the exam? You cannot change your answers afterwards.")) {
         return;
     }
 
-    const result = await api("POST", "/api/student/exam/" + attempt.examId + "/close");
+    await api("POST", "/api/student/exam/" + attempt.examId + "/close");
     $("result-title").textContent = attempt.title;
-    $("result-score").textContent = "Score: " + result.score + " / " + total;
     attempt = null;
     showView("result-view");
 }));

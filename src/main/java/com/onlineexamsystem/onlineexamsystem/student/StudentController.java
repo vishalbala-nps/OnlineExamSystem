@@ -193,7 +193,8 @@ public class StudentController {
         return ResponseEntity.ok(new AttemptQuestion(attempt.getId(), questionId, chosen));
     }
 
-    // Scores the attempt (one point per correct answer) and closes it for good
+    // Scores the attempt (one point per correct answer) and closes it for good.
+    // The score is only shown to the admin, so nothing is returned to the student.
     @PostMapping("/exam/{examId}/close")
     public ResponseEntity<?> closeExam(@PathVariable int examId, Authentication auth) {
         int userId = currentUserId(auth);
@@ -210,6 +211,6 @@ public class StudentController {
                         + "WHERE aq.id = ? AND aq.chosen = q.correct"
                         + ") WHERE id = ?",
                 attempt.getId(), attempt.getId());
-        return ResponseEntity.ok(findAttempt(userId, examId));
+        return ResponseEntity.noContent().build();
     }
 }

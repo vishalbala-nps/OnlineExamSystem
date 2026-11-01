@@ -246,16 +246,20 @@ public class AdminController {
 
     // ---------- Results ----------
 
-    // Every student's attempts with their score, grouped by exam
+    // Every attempt with its score and rank. RANK() numbers the submitted attempts of each exam by score,
+    // highest first; equal scores share a rank (1, 2, 2, 4). Open attempts get no rank.
+    private static final String RESULT_SQL =
+            "SELECT a.id, u.username, e.id AS exam_id, e.title, a.score, a.open, "
+                    + "(SELECT COUNT(*) FROM attempt_question aq WHERE aq.id = a.id) AS total, "
+                    + "CASE WHEN a.open = 0 THEN RANK() OVER (PARTITION BY a.exam, a.open ORDER BY a.score DESC) END AS exam_rank "
+                    + "FROM attempts a "
+                    + "JOIN users u ON u.id = a.user "
+                    + "JOIN exams e ON e.id = a.exam";
+
+    // The rank list: grouped by exam, submitted attempts best first, then the ones still in progress
     @GetMapping("/result")
     public List<Result> listResults() {
-        return jdbc.query(
-                "SELECT a.id, u.username, e.id AS exam_id, e.title, a.score, a.open, "
-                        + "(SELECT COUNT(*) FROM attempt_question aq WHERE aq.id = a.id) AS total "
-                        + "FROM attempts a "
-                        + "JOIN users u ON u.id = a.user "
-                        + "JOIN exams e ON e.id = a.exam "
-                        + "ORDER BY e.title, u.username",
+        return jdbc.query(RESULT_SQL + " ORDER BY e.title, a.open, exam_rank, u.username",
                 (rs, rowNum) -> new Result(
                         rs.getInt("id"),
                         rs.getString("username"),
@@ -263,20 +267,16 @@ public class AdminController {
                         rs.getString("title"),
                         rs.getObject("score", Integer.class),
                         rs.getInt("total"),
-                        rs.getBoolean("open")
+                        rs.getBoolean("open"),
+                        rs.getObject("exam_rank", Integer.class)
                 ));
     }
 
     // One student's attempt with every question, the correct answer and what they chose
     @GetMapping("/result/{attemptId}")
     public ResponseEntity<?> getResult(@PathVariable int attemptId) {
-        List<Result> rows = jdbc.query(
-                "SELECT a.id, u.username, e.id AS exam_id, e.title, a.score, a.open, "
-                        + "(SELECT COUNT(*) FROM attempt_question aq WHERE aq.id = a.id) AS total "
-                        + "FROM attempts a "
-                        + "JOIN users u ON u.id = a.user "
-                        + "JOIN exams e ON e.id = a.exam "
-                        + "WHERE a.id = ?",
+        // Rank first over all attempts, then pick this one; a plain WHERE would rank it against itself only
+        List<Result> rows = jdbc.query("SELECT * FROM (" + RESULT_SQL + ") ranked WHERE ranked.id = ?",
                 (rs, rowNum) -> new Result(
                         rs.getInt("id"),
                         rs.getString("username"),
@@ -284,7 +284,8 @@ public class AdminController {
                         rs.getString("title"),
                         rs.getObject("score", Integer.class),
                         rs.getInt("total"),
-                        rs.getBoolean("open")
+                        rs.getBoolean("open"),
+                        rs.getObject("exam_rank", Integer.class)
                 ), attemptId);
         if (rows.isEmpty()) {
             return error(HttpStatus.NOT_FOUND, "Attempt " + attemptId + " not found");

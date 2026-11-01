@@ -176,6 +176,8 @@
         .option-grid { display: grid; gap: 0.7rem; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
         td.num { font-variant-numeric: tabular-nums; }
         .pill.bad { background: #fdecea; color: var(--danger); }
+        td.rank { font-weight: 600; font-variant-numeric: tabular-nums; width: 4rem; }
+        td.rank.top { color: var(--primary); }
 
         /* Admin: one student's answers */
         .review { display: grid; gap: 0.75rem; }
@@ -277,7 +279,7 @@
             <div class="card">
                 <h2>Question pool</h2>
                 <table>
-                    <thead><tr><th>#</th><th>Question</th><th>Answer</th><th></th></tr></thead>
+                    <thead><tr><th>Question</th><th>Answer</th><th></th></tr></thead>
                     <tbody id="exam-detail-questions"></tbody>
                 </table>
                 <h3>Add a question to the pool</h3>
@@ -386,7 +388,7 @@
             </div>
             <div class="card">
                 <table>
-                    <thead><tr><th>Student</th><th>Exam</th><th>Score</th><th>Status</th><th></th></tr></thead>
+                    <thead><tr><th>Rank</th><th>Student</th><th>Exam</th><th>Score</th><th>Status</th><th></th></tr></thead>
                     <tbody id="result-table"></tbody>
                 </table>
             </div>
@@ -400,6 +402,7 @@
             </div>
             <div class="facts">
                 <div class="fact"><div class="label">Score</div><div class="value" id="attempt-review-score"></div></div>
+                <div class="fact"><div class="label">Rank</div><div class="value" id="attempt-review-rank"></div></div>
                 <div class="fact"><div class="label">Status</div><div class="value"><span id="attempt-review-status" class="pill"></span></div></div>
             </div>
             <div class="review" id="attempt-review-answers"></div>
@@ -440,8 +443,8 @@
     <!-- Student: result -->
     <section id="result-view" class="card" hidden>
         <h2 id="result-title"></h2>
-        <p class="score" id="result-score"></p>
-        <p class="muted">This exam is now closed and cannot be taken again.</p>
+        <p class="score">Exam submitted</p>
+        <p class="muted">Your answers have been saved. This exam is now closed and cannot be taken again.</p>
         <button id="result-back" type="button">Back to exams</button>
     </section>
 </main>
