@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Online Exam System</title>
+    <style>
+        :root {
+            --bg: #f4f6f9;
+            --surface: #ffffff;
+            --text: #1d2430;
+            --muted: #5f6b7c;
+            --border: #d9dee6;
+            --primary: #2456a6;
+            --primary-text: #ffffff;
+            --danger: #b3261e;
+            --success: #1d7a46;
+            --chosen: #e6eefb;
+        }
+
+        * { box-sizing: border-box; }
+
+        /* Make the hidden attribute always win, even on elements styled with display: grid or flex (.page, .row) */
+        [hidden] { display: none !important; }
+
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--text);
+            font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+            font-size: 15px;
+            line-height: 1.5;
+        }
+
+        header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            padding: 0.75rem 1.25rem;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+        }
+
+        header h1 { font-size: 1.15rem; margin: 0; }
+        #user-info { display: flex; align-items: center; gap: 0.75rem; color: var(--muted); }
+
+        main { max-width: 1100px; margin: 0 auto; padding: 1.25rem; display: grid; gap: 1.25rem; }
+
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 1.1rem 1.25rem;
+        }
+
+        .card h2 { font-size: 1.05rem; margin: 0 0 0.75rem; }
+        .card h3 { font-size: 0.95rem; margin: 1rem 0 0.5rem; }
+
+        .columns { display: grid; gap: 1.25rem; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); align-items: start; }
+
+        label { display: grid; gap: 0.25rem; font-size: 0.9rem; color: var(--muted); }
+        input, select, textarea {
+            font: inherit;
+            color: var(--text);
+            padding: 0.45rem 0.6rem;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: var(--surface);
+            width: 100%;
+        }
+        textarea { resize: vertical; min-height: 4rem; }
+
+        form { display: grid; gap: 0.7rem; }
+        .row { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+
+        button {
+            font: inherit;
+            padding: 0.4rem 0.85rem;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            color: var(--text);
+            cursor: pointer;
+        }
+        button:hover { border-color: var(--primary); }
+        button.primary { background: var(--primary); border-color: var(--primary); color: var(--primary-text); }
+        button.danger { color: var(--danger); }
+        button.small { padding: 0.2rem 0.55rem; font-size: 0.85rem; }
+        button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+            outline: 2px solid var(--primary);
+            outline-offset: 1px;
+        }
+
+        table { width: 100%; border-collapse: collapse; }
+        th, td { text-align: left; padding: 0.45rem 0.4rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+        th { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
+        td.actions { white-space: nowrap; text-align: right; }
+        .muted { color: var(--muted); }
+        .empty { color: var(--muted); font-style: italic; }
+
+        .message { padding: 0.6rem 0.8rem; border-radius: 6px; margin: 0; }
+        .message.error { background: #fdecea; color: var(--danger); }
+        .message.success { background: #e7f5ec; color: var(--success); }
+
+        #login-view { max-width: 380px; margin: 3rem auto; width: 100%; }
+
+        /* Student exam-taking */
+        #question-nav { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+        #question-nav button.current { border-color: var(--primary); border-width: 2px; }
+        #question-nav button.answered { background: var(--chosen); }
+        .option {
+            display: flex;
+            gap: 0.6rem;
+            align-items: flex-start;
+            padding: 0.6rem 0.75rem;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text);
+            cursor: pointer;
+        }
+        .option input { width: auto; margin-top: 0.25rem; }
+        .option.selected { background: var(--chosen); border-color: var(--primary); }
+        #options { display: grid; gap: 0.5rem; margin: 0.75rem 0; }
+        .score { font-size: 1.6rem; font-weight: 600; margin: 0.25rem 0; }
+
+        /* Admin: tabs and pages */
+        .tabs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.25rem;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 1.25rem;
+        }
+        .tabs a {
+            padding: 0.55rem 0.95rem;
+            color: var(--muted);
+            text-decoration: none;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -1px;
+            font-weight: 500;
+        }
+        .tabs a:hover { color: var(--text); }
+        .tabs a.active { color: var(--primary); border-bottom-color: var(--primary); }
+        .tabs a:focus-visible { outline: 2px solid var(--primary); outline-offset: -2px; }
+
+        .page { display: grid; gap: 1rem; }
+        .page-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.75rem; }
+        .page-head h2 { margin: 0; font-size: 1.25rem; }
+        .page-head p { margin: 0.15rem 0 0; }
+        .back-link { color: var(--primary); text-decoration: none; font-size: 0.9rem; }
+        .back-link:hover { text-decoration: underline; }
+        a.cell-link { color: var(--text); font-weight: 500; text-decoration: none; }
+        a.cell-link:hover { color: var(--primary); text-decoration: underline; }
+        a.button {
+            display: inline-block;
+            padding: 0.4rem 0.85rem;
+            border-radius: 6px;
+            border: 1px solid var(--primary);
+            background: var(--primary);
+            color: var(--primary-text);
+            text-decoration: none;
+        }
+
+        .facts { display: flex; flex-wrap: wrap; gap: 0.75rem; }
+        .fact { border: 1px solid var(--border); border-radius: 8px; padding: 0.6rem 0.9rem; min-width: 10rem; background: var(--surface); }
+        .fact .label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
+        .fact .value { font-size: 1.2rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+        .pill { display: inline-block; padding: 0.1rem 0.55rem; border-radius: 999px; font-size: 0.8rem; font-weight: 500; }
+        .pill.ok { background: #e7f5ec; color: var(--success); }
+        .pill.warn { background: #fdf3e1; color: #8a5a00; }
+        .pill.info { background: var(--chosen); color: var(--primary); }
+
+        .form-card { max-width: 640px; }
+        .option-grid { display: grid; gap: 0.7rem; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+        td.num { font-variant-numeric: tabular-nums; }
+        .pill.bad { background: #fdecea; color: var(--danger); }
+
+        /* Admin: analysis */
+        .bar { height: 0.45rem; background: var(--border); border-radius: 999px; overflow: hidden; margin-top: 0.3rem; min-width: 6rem; }
+        .bar span { display: block; height: 100%; background: var(--success); }
+        .bar.low span { background: var(--danger); }
+        .bar.mid span { background: #c98a00; }
+        .choices { display: flex; flex-wrap: wrap; gap: 0.35rem; font-variant-numeric: tabular-nums; }
+        .choice { padding: 0.05rem 0.45rem; border-radius: 4px; background: var(--bg); font-size: 0.85rem; white-space: nowrap; }
+        .choice.correct { background: #e7f5ec; color: var(--success); font-weight: 600; }
+
+        /* Admin: one student's answers */
+        .review { display: grid; gap: 0.75rem; }
+        .review-question { display: grid; gap: 0.5rem; }
+        .review-question h3 { margin: 0; font-size: 1rem; display: flex; gap: 0.5rem; align-items: baseline; justify-content: space-between; flex-wrap: wrap; }
+        .review-option { display: flex; justify-content: space-between; gap: 0.75rem; padding: 0.45rem 0.7rem; border: 1px solid var(--border); border-radius: 6px; }
+        .review-option.correct { border-color: var(--success); background: #e7f5ec; }
+        .review-option.wrong { border-color: var(--danger); background: #fdecea; }
+        .review-option .tag { font-size: 0.8rem; font-weight: 600; white-space: nowrap; }
+        .review-option.correct .tag { color: var(--success); }
+        .review-option.wrong .tag { color: var(--danger); }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>Online Exam System</h1>
+    <div id="user-info" hidden>
+        <span id="user-name"></span>
+        <button id="logout-button" type="button">Log out</button>
+    </div>
+</header>
+
+<main>
+    <p id="message" class="message" hidden></p>
+
+    <!-- Login -->
+    <section id="login-view" class="card" hidden>
+        <h2>Log in</h2>
+        <form id="login-form">
+            <label>Username <input id="login-username" required autocomplete="username"></label>
+            <label>Password <input id="login-password" type="password" required autocomplete="current-password"></label>
+            <button class="primary" type="submit">Log in</button>
+        </form>
+    </section>
+
+    <!-- Admin: one page is shown at a time, chosen by the URL hash (e.g. #/exams/3) -->
+    <section id="admin-view" hidden>
+        <nav class="tabs" aria-label="Admin sections">
+            <a href="#/exams" data-tab="exams">Exams</a>
+            <a href="#/questions" data-tab="questions">Questions</a>
+            <a href="#/students" data-tab="students">Students</a>
+            <a href="#/results" data-tab="results">Results</a>
+        </nav>
+
+        <!-- Exams list -->
+        <div id="page-exams" class="page" hidden>
+            <div class="page-head">
+                <div>
+                    <h2>Exams</h2>
+                    <p class="muted">Open an exam to manage its question pool.</p>
+                </div>
+                <a class="button" href="#/exams/new">New exam</a>
+            </div>
+            <div class="card">
+                <table>
+                    <thead><tr><th>Title</th><th>Questions per student</th><th></th></tr></thead>
+                    <tbody id="exam-table"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- New / edit exam -->
+        <div id="page-exam-form" class="page" hidden>
+            <a class="back-link" id="exam-form-back" href="#/exams">← Back</a>
+            <div class="card form-card">
+                <h2 id="exam-form-title">New exam</h2>
+                <form id="exam-form">
+                    <input id="exam-id" type="hidden">
+                    <label>Title <input id="exam-title" required maxlength="100"></label>
+                    <label>Questions per student
+                        <input id="exam-num-questions" type="number" min="1" required>
+                    </label>
+                    <p class="muted" style="margin: 0">Each student gets this many questions, picked at random from the exam's pool.</p>
+                    <div class="row">
+                        <button class="primary" type="submit">Save exam</button>
+                        <a class="back-link" id="exam-form-cancel" href="#/exams">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- One exam and its question pool -->
+        <div id="page-exam-detail" class="page" hidden>
+            <a class="back-link" href="#/exams">← All exams</a>
+            <div class="page-head">
+                <h2 id="exam-detail-title"></h2>
+                <div class="row">
+                    <a class="back-link" id="exam-detail-analysis" href="#/analysis">Analysis</a>
+                    <a class="back-link" id="exam-detail-results" href="#/results">View results</a>
+                    <a class="button" id="exam-detail-edit" href="#/exams">Edit</a>
+                    <button id="exam-detail-delete" class="danger" type="button">Delete</button>
+                </div>
+            </div>
+            <div class="facts">
+                <div class="fact"><div class="label">Questions per student</div><div class="value" id="exam-detail-per-student"></div></div>
+                <div class="fact"><div class="label">Questions in pool</div><div class="value" id="exam-detail-pool-size"></div></div>
+                <div class="fact"><div class="label">Status</div><div class="value"><span id="exam-detail-status" class="pill"></span></div></div>
+            </div>
+            <div class="card">
+                <h2>Question pool</h2>
+                <table>
+                    <thead><tr><th>#</th><th>Question</th><th>Answer</th><th></th></tr></thead>
+                    <tbody id="exam-detail-questions"></tbody>
+                </table>
+                <h3>Add a question to the pool</h3>
+                <form id="assign-form" class="row">
+                    <select id="assign-question" style="flex: 1; min-width: 14rem"></select>
+                    <button class="primary" type="submit" id="assign-button">Add</button>
+                </form>
+                <p id="assign-empty" class="muted" hidden>
+                    Every question is already in this exam. <a href="#/questions/new">Create a new question</a>.
+                </p>
+            </div>
+        </div>
+
+        <!-- Questions list -->
+        <div id="page-questions" class="page" hidden>
+            <div class="page-head">
+                <div>
+                    <h2>Questions</h2>
+                    <p class="muted">The question bank. Add questions to an exam from that exam's page.</p>
+                </div>
+                <a class="button" href="#/questions/new">New question</a>
+            </div>
+            <div class="card">
+                <table>
+                    <thead><tr><th>#</th><th>Question</th><th>Answer</th><th></th></tr></thead>
+                    <tbody id="question-table"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- New / edit question -->
+        <div id="page-question-form" class="page" hidden>
+            <a class="back-link" href="#/questions">← All questions</a>
+            <div class="card form-card">
+                <h2 id="question-form-title">New question</h2>
+                <form id="question-form">
+                    <input id="question-id" type="hidden">
+                    <label>Question <textarea id="question-text" required maxlength="1000"></textarea></label>
+                    <div class="option-grid">
+                        <label>Option A <input id="question-a" required maxlength="255"></label>
+                        <label>Option B <input id="question-b" required maxlength="255"></label>
+                        <label>Option C <input id="question-c" required maxlength="255"></label>
+                        <label>Option D <input id="question-d" required maxlength="255"></label>
+                    </div>
+                    <label>Correct answer
+                        <select id="question-correct" required style="max-width: 8rem">
+                            <option value="A">A</option>
+                            <option value="B">B</option>
+                            <option value="C">C</option>
+                            <option value="D">D</option>
+                        </select>
+                    </label>
+                    <div class="row">
+                        <button class="primary" type="submit">Save question</button>
+                        <a class="back-link" href="#/questions">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Students list -->
+        <div id="page-students" class="page" hidden>
+            <div class="page-head">
+                <div>
+                    <h2>Students</h2>
+                    <p class="muted">Students log in with the username and password you give them.</p>
+                </div>
+                <a class="button" href="#/students/new">Add student</a>
+            </div>
+            <div class="card">
+                <table>
+                    <thead><tr><th>ID</th><th>Username</th></tr></thead>
+                    <tbody id="student-table"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Add student -->
+        <div id="page-student-form" class="page" hidden>
+            <a class="back-link" href="#/students">← All students</a>
+            <div class="card form-card">
+                <h2>Add student</h2>
+                <form id="student-form">
+                    <label>Username <input id="student-username" required maxlength="50" autocomplete="off"></label>
+                    <label>Password <input id="student-password" type="password" required autocomplete="new-password"></label>
+                    <div class="row">
+                        <button class="primary" type="submit">Create student</button>
+                        <a class="back-link" href="#/students">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Results -->
+        <div id="page-results" class="page" hidden>
+            <div class="page-head">
+                <div>
+                    <h2>Results</h2>
+                    <p class="muted" id="result-summary"></p>
+                </div>
+                <div class="row">
+                    <label for="result-exam-filter" style="display: inline">Exam</label>
+                    <select id="result-exam-filter" style="width: auto"></select>
+                    <a class="button" id="result-analysis-link" href="#/results" hidden>View analysis</a>
+                    <button id="refresh-results" type="button">Refresh</button>
+                </div>
+            </div>
+            <div class="card">
+                <table>
+                    <thead><tr><th>Student</th><th>Exam</th><th>Score</th><th>Status</th><th></th></tr></thead>
+                    <tbody id="result-table"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Analysis of one exam -->
+        <div id="page-analysis" class="page" hidden>
+            <a class="back-link" id="analysis-back" href="#/results">← Results</a>
+            <div class="page-head">
+                <div>
+                    <h2 id="analysis-title"></h2>
+                    <p class="muted">Based on submitted attempts only. Hardest questions are listed first.</p>
+                </div>
+            </div>
+            <div class="facts">
+                <div class="fact"><div class="label">Submitted</div><div class="value" id="analysis-submitted"></div></div>
+                <div class="fact"><div class="label">In progress</div><div class="value" id="analysis-in-progress"></div></div>
+                <div class="fact"><div class="label" id="analysis-average-label">Average score</div><div class="value" id="analysis-average"></div></div>
+                <div class="fact"><div class="label">Highest</div><div class="value" id="analysis-highest"></div></div>
+                <div class="fact"><div class="label">Lowest</div><div class="value" id="analysis-lowest"></div></div>
+            </div>
+            <div class="card">
+                <h2>Questions</h2>
+                <table>
+                    <thead><tr><th>#</th><th>Question</th><th>Times asked</th><th>Answered correctly</th><th>Answers chosen</th></tr></thead>
+                    <tbody id="analysis-table"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- One student's answers -->
+        <div id="page-attempt" class="page" hidden>
+            <a class="back-link" id="attempt-review-back" href="#/results">← Results</a>
+            <div class="page-head">
+                <h2 id="attempt-review-title"></h2>
+            </div>
+            <div class="facts">
+                <div class="fact"><div class="label">Score</div><div class="value" id="attempt-review-score"></div></div>
+                <div class="fact"><div class="label">Status</div><div class="value"><span id="attempt-review-status" class="pill"></span></div></div>
+            </div>
+            <div class="review" id="attempt-review-answers"></div>
+        </div>
+    </section>
+
+    <!-- Student: list of exams -->
+    <section id="student-view" class="card" hidden>
+        <h2>Your exams</h2>
+        <table>
+            <thead><tr><th>Exam</th><th>Questions</th><th></th></tr></thead>
+            <tbody id="student-exam-table"></tbody>
+        </table>
+    </section>
+
+    <!-- Student: taking an exam -->
+    <section id="attempt-view" class="card" hidden>
+        <h2 id="attempt-title"></h2>
+        <p class="muted" id="attempt-progress"></p>
+        <div id="question-nav"></div>
+
+        <div id="question-panel" hidden>
+            <h3 id="question-heading"></h3>
+            <p id="question-body"></p>
+            <div id="options"></div>
+            <div class="row">
+                <button id="prev-question" type="button">Previous</button>
+                <button id="next-question" type="button">Next</button>
+            </div>
+        </div>
+
+        <div class="row" style="margin-top: 1.25rem">
+            <button id="back-to-exams" type="button">Back to exams</button>
+            <button id="close-exam" class="primary" type="button">Submit exam</button>
+        </div>
+    </section>
+
+    <!-- Student: result -->
+    <section id="result-view" class="card" hidden>
+        <h2 id="result-title"></h2>
+        <p class="score" id="result-score"></p>
+        <p class="muted">This exam is now closed and cannot be taken again.</p>
+        <button id="result-back" type="button">Back to exams</button>
+    </section>
+</main>
+
+<script src="index.js"></script>
+</body>
+</html>
