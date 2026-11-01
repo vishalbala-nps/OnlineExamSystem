@@ -153,10 +153,10 @@ $("logout-button").addEventListener("click", () => {
 //   #/questions        #/questions/new    #/questions/{id}/edit
 //   #/students         #/students/new
 //   #/results          #/results/{examId}
-//   #/analysis/{examId}                   #/attempts/{attemptId}
+//   #/attempts/{attemptId}
 
 const adminPages = ["page-exams", "page-exam-form", "page-exam-detail", "page-questions",
-    "page-question-form", "page-students", "page-student-form", "page-results", "page-analysis", "page-attempt"];
+    "page-question-form", "page-students", "page-student-form", "page-results", "page-attempt"];
 
 // A message to show on the next page, e.g. "Exam created." after saving
 let flashMessage = null;
@@ -201,8 +201,6 @@ async function routeAdmin() {
             else await renderStudents();
         } else if (section === "results") {
             await renderResults(id || "");
-        } else if (section === "analysis" && id) {
-            await renderAnalysis(id);
         } else if (section === "attempts" && id) {
             await renderAttemptReview(id);
         } else {
@@ -300,7 +298,6 @@ async function renderExamDetail(id) {
     $("exam-detail-title").textContent = exam.title;
     $("exam-detail-edit").href = "#/exams/" + exam.id + "/edit";
     $("exam-detail-results").href = "#/results/" + exam.id;
-    $("exam-detail-analysis").href = "#/analysis/" + exam.id;
     $("exam-detail-per-student").textContent = exam.numQuestions;
     $("exam-detail-pool-size").textContent = pool.length;
 
@@ -362,11 +359,10 @@ async function renderQuestions() {
     const table = $("question-table");
     table.replaceChildren();
     if (questions.length === 0) {
-        table.append(emptyRow(4, "No questions yet. Use New question to create one."));
+        table.append(emptyRow(3, "No questions yet. Use New question to create one."));
     }
     for (const question of questions) {
         table.append(el("tr", {},
-            el("td", { class: "num" }, String(question.id)),
             el("td", {}, question.text),
             el("td", {}, question.correct + ". " + question["option" + question.correct]),
             el("td", { class: "actions" },
@@ -384,7 +380,7 @@ async function renderQuestionForm(id) {
 
     if (id) {
         const question = await api("GET", "/api/admin/question/" + id);
-        $("question-form-title").textContent = "Edit question #" + question.id;
+        $("question-form-title").textContent = "Edit question";
         $("question-text").value = question.text;
         $("question-a").value = question.optionA;
         $("question-b").value = question.optionB;
@@ -417,7 +413,7 @@ $("question-form").addEventListener("submit", handle(async () => {
 }));
 
 async function deleteQuestion(question) {
-    if (!confirm("Delete question #" + question.id + "? It is removed from every exam it belongs to.")) {
+    if (!confirm('Delete the question "' + question.text + '"? It is removed from every exam it belongs to.')) {
         return;
     }
     await api("DELETE", "/api/admin/question/" + question.id);
@@ -471,8 +467,6 @@ async function renderResults(examId) {
         filter.append(el("option", { value: exam.id }, exam.title));
     }
     filter.value = exams.some((e) => String(e.id) === examId) ? examId : "";
-    $("result-analysis-link").hidden = !filter.value;
-    $("result-analysis-link").href = "#/analysis/" + filter.value;
 
     const rows = filter.value ? results.filter((r) => String(r.examId) === filter.value) : results;
     const submitted = rows.filter((r) => !r.open);
@@ -499,52 +493,6 @@ async function renderResults(examId) {
                 : el("span", { class: "pill ok" }, "Submitted")),
             el("td", { class: "actions" },
                 el("button", { class: "small", type: "button", onclick: () => navigate("#/attempts/" + result.attemptId) }, "View answers"))
-        ));
-    }
-}
-
-// ---------- Admin: exam analysis ----------
-
-async function renderAnalysis(examId) {
-    showAdminPage("page-analysis", "results");
-    const analysis = await api("GET", "/api/admin/exam/" + examId + "/analysis");
-
-    $("analysis-back").href = "#/results/" + analysis.examId;
-    $("analysis-title").textContent = "Analysis: " + analysis.title;
-    $("analysis-submitted").textContent = analysis.submitted;
-    $("analysis-in-progress").textContent = analysis.inProgress;
-    $("analysis-average-label").textContent = "Average score (out of " + analysis.numQuestions + ")";
-    $("analysis-average").textContent = analysis.averageScore === null ? "—" : analysis.averageScore.toFixed(1);
-    $("analysis-highest").textContent = analysis.highestScore === null ? "—" : analysis.highestScore;
-    $("analysis-lowest").textContent = analysis.lowestScore === null ? "—" : analysis.lowestScore;
-
-    // Hardest first: lowest share of correct answers at the top
-    const questions = analysis.questions
-        .map((q) => ({ ...q, percent: q.asked ? Math.round((q.correctCount / q.asked) * 100) : 0 }))
-        .sort((a, b) => a.percent - b.percent);
-
-    const table = $("analysis-table");
-    table.replaceChildren();
-    if (questions.length === 0) {
-        table.append(emptyRow(5, "No one has submitted this exam yet."));
-    }
-    for (const q of questions) {
-        const level = q.percent < 40 ? " low" : q.percent < 70 ? " mid" : "";
-        const bar = el("div", { class: "bar" + level }, el("span", { style: "width: " + q.percent + "%" }));
-
-        const choices = el("div", { class: "choices" });
-        for (const letter of ["A", "B", "C", "D"]) {
-            choices.append(el("span", { class: "choice" + (letter === q.correct ? " correct" : ""), title: letter === q.correct ? "Correct answer" : "" },
-                letter + ": " + q["chose" + letter]));
-        }
-        choices.append(el("span", { class: "choice" }, "Skipped: " + q.unanswered));
-
-        table.append(el("tr", {},
-            el("td", { class: "num" }, String(q.questionId)),
-            el("td", {}, q.text),
-            el("td", { class: "num" }, String(q.asked)),
-            el("td", { class: "num" }, q.correctCount + " (" + q.percent + "%)", bar),
-            el("td", {}, choices)
         ));
     }
 }

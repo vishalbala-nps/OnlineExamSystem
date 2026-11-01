@@ -177,15 +177,6 @@
         td.num { font-variant-numeric: tabular-nums; }
         .pill.bad { background: #fdecea; color: var(--danger); }
 
-        /* Admin: analysis */
-        .bar { height: 0.45rem; background: var(--border); border-radius: 999px; overflow: hidden; margin-top: 0.3rem; min-width: 6rem; }
-        .bar span { display: block; height: 100%; background: var(--success); }
-        .bar.low span { background: var(--danger); }
-        .bar.mid span { background: #c98a00; }
-        .choices { display: flex; flex-wrap: wrap; gap: 0.35rem; font-variant-numeric: tabular-nums; }
-        .choice { padding: 0.05rem 0.45rem; border-radius: 4px; background: var(--bg); font-size: 0.85rem; white-space: nowrap; }
-        .choice.correct { background: #e7f5ec; color: var(--success); font-weight: 600; }
-
         /* Admin: one student's answers */
         .review { display: grid; gap: 0.75rem; }
         .review-question { display: grid; gap: 0.5rem; }
@@ -273,7 +264,6 @@
             <div class="page-head">
                 <h2 id="exam-detail-title"></h2>
                 <div class="row">
-                    <a class="back-link" id="exam-detail-analysis" href="#/analysis">Analysis</a>
                     <a class="back-link" id="exam-detail-results" href="#/results">View results</a>
                     <a class="button" id="exam-detail-edit" href="#/exams">Edit</a>
                     <button id="exam-detail-delete" class="danger" type="button">Delete</button>
@@ -312,7 +302,7 @@
             </div>
             <div class="card">
                 <table>
-                    <thead><tr><th>#</th><th>Question</th><th>Answer</th><th></th></tr></thead>
+                    <thead><tr><th>Question</th><th>Answer</th><th></th></tr></thead>
                     <tbody id="question-table"></tbody>
                 </table>
             </div>
@@ -391,7 +381,6 @@
                 <div class="row">
                     <label for="result-exam-filter" style="display: inline">Exam</label>
                     <select id="result-exam-filter" style="width: auto"></select>
-                    <a class="button" id="result-analysis-link" href="#/results" hidden>View analysis</a>
                     <button id="refresh-results" type="button">Refresh</button>
                 </div>
             </div>
@@ -399,31 +388,6 @@
                 <table>
                     <thead><tr><th>Student</th><th>Exam</th><th>Score</th><th>Status</th><th></th></tr></thead>
                     <tbody id="result-table"></tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- Analysis of one exam -->
-        <div id="page-analysis" class="page" hidden>
-            <a class="back-link" id="analysis-back" href="#/results">← Results</a>
-            <div class="page-head">
-                <div>
-                    <h2 id="analysis-title"></h2>
-                    <p class="muted">Based on submitted attempts only. Hardest questions are listed first.</p>
-                </div>
-            </div>
-            <div class="facts">
-                <div class="fact"><div class="label">Submitted</div><div class="value" id="analysis-submitted"></div></div>
-                <div class="fact"><div class="label">In progress</div><div class="value" id="analysis-in-progress"></div></div>
-                <div class="fact"><div class="label" id="analysis-average-label">Average score</div><div class="value" id="analysis-average"></div></div>
-                <div class="fact"><div class="label">Highest</div><div class="value" id="analysis-highest"></div></div>
-                <div class="fact"><div class="label">Lowest</div><div class="value" id="analysis-lowest"></div></div>
-            </div>
-            <div class="card">
-                <h2>Questions</h2>
-                <table>
-                    <thead><tr><th>#</th><th>Question</th><th>Times asked</th><th>Answered correctly</th><th>Answers chosen</th></tr></thead>
-                    <tbody id="analysis-table"></tbody>
                 </table>
             </div>
         </div>
