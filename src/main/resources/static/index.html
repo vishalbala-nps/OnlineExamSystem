@@ -4,448 +4,847 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Online Exam System</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap">
     <style>
+        /* Layout: a light app shell. Teachers get a sidebar of sections; students get an answer-sheet style exam screen. */
         :root {
-            --bg: #f4f6f9;
+            --bg: #eef1f6;
             --surface: #ffffff;
-            --text: #1d2430;
-            --muted: #5f6b7c;
-            --border: #d9dee6;
-            --primary: #2456a6;
-            --primary-text: #ffffff;
-            --danger: #b3261e;
-            --success: #1d7a46;
-            --chosen: #e6eefb;
+            --surface-2: #f6f8fb;
+            --text: #172032;
+            --muted: #64708a;
+            --border: #dfe4ec;
+            --primary: #2f4ad0;
+            --primary-dark: #2439a8;
+            --primary-soft: #e8ecfb;
+            --success: #17804a;
+            --success-soft: #e3f4ea;
+            --warn: #9a5c00;
+            --warn-soft: #fdf2df;
+            --danger: #c0362c;
+            --danger-soft: #fbe7e5;
+            --radius: 12px;
+            --shadow: 0 1px 2px rgba(23, 32, 50, 0.06), 0 4px 16px rgba(23, 32, 50, 0.05);
+            --font: "Manrope", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
         }
 
         * { box-sizing: border-box; }
 
-        /* Make the hidden attribute always win, even on elements styled with display: grid or flex (.page, .row) */
+        /* Make the hidden attribute always win, even on elements styled with display: grid or flex */
         [hidden] { display: none !important; }
+
+        html, body { min-height: 100%; }
 
         body {
             margin: 0;
             background: var(--bg);
             color: var(--text);
-            font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+            font-family: var(--font);
             font-size: 15px;
-            line-height: 1.5;
+            line-height: 1.55;
+            -webkit-font-smoothing: antialiased;
         }
 
+        h1, h2, h3 { margin: 0; line-height: 1.25; text-wrap: balance; }
+        p { margin: 0; }
+        a { color: var(--primary); }
+
+        /* ---------- Header ---------- */
         header {
+            position: sticky;
+            top: 0;
+            z-index: 20;
             display: flex;
             align-items: center;
             justify-content: space-between;
             gap: 1rem;
-            padding: 0.75rem 1.25rem;
-            background: var(--surface);
+            padding: 0.7rem max(16px, 1.5rem);
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(8px);
             border-bottom: 1px solid var(--border);
         }
 
-        header h1 { font-size: 1.15rem; margin: 0; }
-        #user-info { display: flex; align-items: center; gap: 0.75rem; color: var(--muted); }
+        .brand { display: flex; align-items: center; gap: 0.65rem; }
+        .brand-mark {
+            width: 2.1rem;
+            height: 2.1rem;
+            border-radius: 9px;
+            background: var(--primary);
+            display: grid;
+            place-items: center;
+            flex: none;
+        }
+        .brand-mark svg { width: 1.2rem; height: 1.2rem; }
+        .brand h1 { font-size: 1.05rem; font-weight: 800; letter-spacing: -0.01em; }
 
-        main { max-width: 1100px; margin: 0 auto; padding: 1.25rem; display: grid; gap: 1.25rem; }
+        .user-menu { position: relative; }
+        .user-chip {
+            display: flex;
+            align-items: center;
+            gap: 0.55rem;
+            padding: 0.3rem 0.55rem 0.3rem 0.3rem;
+            border-radius: 999px;
+            border: 1px solid transparent;
+            background: transparent;
+            text-align: left;
+        }
+        .user-chip:hover, .user-chip[aria-expanded="true"] { background: var(--surface-2); border-color: var(--border); }
+        .user-chip .chevron { width: 1rem; height: 1rem; color: var(--muted); transition: transform 0.15s; }
+        .user-chip[aria-expanded="true"] .chevron { transform: rotate(180deg); }
+        .menu {
+            position: absolute;
+            right: 0;
+            top: calc(100% + 0.4rem);
+            min-width: 11rem;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(23, 32, 50, 0.14);
+            padding: 0.35rem;
+            z-index: 25;
+        }
+        .menu button {
+            width: 100%;
+            justify-content: flex-start;
+            border: 0;
+            background: transparent;
+            padding: 0.55rem 0.7rem;
+            color: var(--danger);
+        }
+        .menu button:hover { background: var(--danger-soft); }
+        .menu button svg { width: 1.05rem; height: 1.05rem; }
+        .avatar {
+            width: 2rem;
+            height: 2rem;
+            border-radius: 50%;
+            background: var(--primary-soft);
+            color: var(--primary);
+            font-weight: 700;
+            display: grid;
+            place-items: center;
+            text-transform: uppercase;
+        }
+        .user-chip .who { line-height: 1.2; }
+        .user-chip #user-name { font-weight: 600; }
+        .user-chip #user-role { display: block; font-size: 0.75rem; color: var(--muted); }
 
+        main {
+            max-width: 1180px;
+            margin: 0 auto;
+            padding: 1.5rem max(16px, 1.5rem) 3rem;
+        }
+
+        /* ---------- Basic elements ---------- */
         .card {
             background: var(--surface);
             border: 1px solid var(--border);
-            border-radius: 8px;
-            padding: 1.1rem 1.25rem;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 1.25rem 1.35rem;
         }
+        .card > h2 { font-size: 1.05rem; margin-bottom: 0.85rem; }
+        .card h3 { font-size: 0.95rem; margin: 1.25rem 0 0.6rem; }
 
-        .card h2 { font-size: 1.05rem; margin: 0 0 0.75rem; }
-        .card h3 { font-size: 0.95rem; margin: 1rem 0 0.5rem; }
-
-        .columns { display: grid; gap: 1.25rem; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); align-items: start; }
-
-        label { display: grid; gap: 0.25rem; font-size: 0.9rem; color: var(--muted); }
+        label { display: grid; gap: 0.3rem; font-size: 0.85rem; font-weight: 600; color: var(--text); }
         input, select, textarea {
             font: inherit;
+            font-weight: 400;
             color: var(--text);
-            padding: 0.45rem 0.6rem;
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            background: var(--surface);
-            width: 100%;
-        }
-        textarea { resize: vertical; min-height: 4rem; }
-
-        form { display: grid; gap: 0.7rem; }
-        .row { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
-
-        button {
-            font: inherit;
-            padding: 0.4rem 0.85rem;
-            border-radius: 6px;
-            border: 1px solid var(--border);
-            background: var(--surface);
-            color: var(--text);
-            cursor: pointer;
-        }
-        button:hover { border-color: var(--primary); }
-        button.primary { background: var(--primary); border-color: var(--primary); color: var(--primary-text); }
-        button.danger { color: var(--danger); }
-        button.small { padding: 0.2rem 0.55rem; font-size: 0.85rem; }
-        button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
-            outline: 2px solid var(--primary);
-            outline-offset: 1px;
-        }
-
-        table { width: 100%; border-collapse: collapse; }
-        th, td { text-align: left; padding: 0.45rem 0.4rem; border-bottom: 1px solid var(--border); vertical-align: top; }
-        th { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--muted); }
-        td.actions { white-space: nowrap; text-align: right; }
-        .muted { color: var(--muted); }
-        .empty { color: var(--muted); font-style: italic; }
-
-        .message { padding: 0.6rem 0.8rem; border-radius: 6px; margin: 0; }
-        .message.error { background: #fdecea; color: var(--danger); }
-        .message.success { background: #e7f5ec; color: var(--success); }
-
-        #login-view { max-width: 380px; margin: 3rem auto; width: 100%; }
-
-        /* Student exam-taking */
-        #question-nav { display: flex; flex-wrap: wrap; gap: 0.4rem; }
-        #question-nav button.current { border-color: var(--primary); border-width: 2px; }
-        #question-nav button.answered { background: var(--chosen); }
-        .option {
-            display: flex;
-            gap: 0.6rem;
-            align-items: flex-start;
             padding: 0.6rem 0.75rem;
             border: 1px solid var(--border);
-            border-radius: 6px;
+            border-radius: 8px;
+            background: var(--surface);
+            width: 100%;
+            transition: border-color 0.15s, box-shadow 0.15s;
+        }
+        input:hover, select:hover, textarea:hover { border-color: #c7cfdc; }
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px var(--primary-soft);
+        }
+        textarea { resize: vertical; min-height: 5.5rem; }
+
+        form { display: grid; gap: 0.95rem; }
+        .row { display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center; }
+        .hint { color: var(--muted); font-size: 0.85rem; font-weight: 400; }
+
+        button, a.button {
+            font: inherit;
+            font-weight: 600;
+            font-size: 0.9rem;
+            padding: 0.55rem 1rem;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: var(--surface);
             color: var(--text);
             cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.4rem;
+            transition: background 0.15s, border-color 0.15s, color 0.15s, box-shadow 0.15s;
         }
-        .option input { width: auto; margin-top: 0.25rem; }
-        .option.selected { background: var(--chosen); border-color: var(--primary); }
-        #options { display: grid; gap: 0.5rem; margin: 0.75rem 0; }
-        .score { font-size: 1.6rem; font-weight: 600; margin: 0.25rem 0; }
+        button:hover { border-color: #c2cad8; background: var(--surface-2); }
+        button.primary, a.button {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: #fff;
+        }
+        button.primary:hover, a.button:hover { background: var(--primary-dark); border-color: var(--primary-dark); }
+        button.danger { color: var(--danger); }
+        button.danger:hover { background: var(--danger-soft); border-color: #f0c4bf; }
+        button.small { padding: 0.3rem 0.65rem; font-size: 0.82rem; }
+        button:disabled { opacity: 0.45; cursor: not-allowed; }
+        button:focus-visible, a:focus-visible, .option input:focus-visible + .bubble {
+            outline: 2px solid var(--primary);
+            outline-offset: 2px;
+        }
 
-        /* Admin: tabs and pages */
-        .tabs {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.25rem;
-            border-bottom: 1px solid var(--border);
-            margin-bottom: 1.25rem;
-        }
-        .tabs a {
-            padding: 0.55rem 0.95rem;
+        .back-link {
             color: var(--muted);
             text-decoration: none;
-            border-bottom: 2px solid transparent;
-            margin-bottom: -1px;
-            font-weight: 500;
+            font-size: 0.88rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            justify-self: start;
         }
-        .tabs a:hover { color: var(--text); }
-        .tabs a.active { color: var(--primary); border-bottom-color: var(--primary); }
-        .tabs a:focus-visible { outline: 2px solid var(--primary); outline-offset: -2px; }
+        .back-link:hover { color: var(--primary); }
 
-        .page { display: grid; gap: 1rem; }
-        .page-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.75rem; }
-        .page-head h2 { margin: 0; font-size: 1.25rem; }
-        .page-head p { margin: 0.15rem 0 0; }
-        .back-link { color: var(--primary); text-decoration: none; font-size: 0.9rem; }
-        .back-link:hover { text-decoration: underline; }
-        a.cell-link { color: var(--text); font-weight: 500; text-decoration: none; }
-        a.cell-link:hover { color: var(--primary); text-decoration: underline; }
-        a.button {
-            display: inline-block;
-            padding: 0.4rem 0.85rem;
-            border-radius: 6px;
-            border: 1px solid var(--primary);
-            background: var(--primary);
-            color: var(--primary-text);
-            text-decoration: none;
+        /* Tables */
+        .table-wrap { overflow-x: auto; margin: 0 -1.35rem -1.25rem; }
+        /* A card that holds a table clips it to its rounded corners; if the table comes first, its header row sits flush at the top */
+        .card:has(> .table-wrap) { overflow: hidden; }
+        .card:has(> .table-wrap:first-child) { padding-top: 0; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { text-align: left; padding: 0.75rem 1.35rem; border-top: 1px solid var(--border); vertical-align: middle; }
+        thead th {
+            border-top: 0;
+            background: var(--surface-2);
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--muted);
         }
+        tbody tr { transition: background 0.12s; }
+        tbody tr:hover { background: #fafbfd; }
+        td.actions { white-space: nowrap; text-align: right; width: 1%; }
+        td.strong { font-weight: 600; }
 
-        .facts { display: flex; flex-wrap: wrap; gap: 0.75rem; }
-        .fact { border: 1px solid var(--border); border-radius: 8px; padding: 0.6rem 0.9rem; min-width: 10rem; background: var(--surface); }
-        .fact .label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
-        .fact .value { font-size: 1.2rem; font-weight: 600; font-variant-numeric: tabular-nums; }
-
-        .pill { display: inline-block; padding: 0.1rem 0.55rem; border-radius: 999px; font-size: 0.8rem; font-weight: 500; }
-        .pill.ok { background: #e7f5ec; color: var(--success); }
-        .pill.warn { background: #fdf3e1; color: #8a5a00; }
-        .pill.info { background: var(--chosen); color: var(--primary); }
-
-        .form-card { max-width: 640px; }
-        .option-grid { display: grid; gap: 0.7rem; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+        /* Sortable column headers */
+        th button.sort {
+            all: unset;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            font: inherit;
+            letter-spacing: inherit;
+            text-transform: inherit;
+            color: inherit;
+        }
+        th button.sort::after { content: "↕"; font-size: 0.85em; opacity: 0.35; }
+        th[aria-sort="ascending"] button.sort::after { content: "↑"; opacity: 1; }
+        th[aria-sort="descending"] button.sort::after { content: "↓"; opacity: 1; }
+        th[aria-sort="ascending"], th[aria-sort="descending"] { color: var(--primary); }
+        th button.sort:hover { color: var(--text); }
+        th button.sort:focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; border-radius: 3px; }
+        td.actions button + button { margin-left: 0.35rem; }
         td.num { font-variant-numeric: tabular-nums; }
-        .pill.bad { background: #fdecea; color: var(--danger); }
-        td.rank { font-weight: 600; font-variant-numeric: tabular-nums; width: 4rem; }
+        td.rank { font-weight: 700; font-variant-numeric: tabular-nums; width: 4.5rem; color: var(--muted); }
         td.rank.top { color: var(--primary); }
+        .empty { color: var(--muted); text-align: center; padding: 2rem 1rem; }
+        .muted { color: var(--muted); }
 
-        /* Admin: one student's answers */
-        .review { display: grid; gap: 0.75rem; }
-        .review-question { display: grid; gap: 0.5rem; }
-        .review-question h3 { margin: 0; font-size: 1rem; display: flex; gap: 0.5rem; align-items: baseline; justify-content: space-between; flex-wrap: wrap; }
-        .review-option { display: flex; justify-content: space-between; gap: 0.75rem; padding: 0.45rem 0.7rem; border: 1px solid var(--border); border-radius: 6px; }
-        .review-option.correct { border-color: var(--success); background: #e7f5ec; }
-        .review-option.wrong { border-color: var(--danger); background: #fdecea; }
-        .review-option .tag { font-size: 0.8rem; font-weight: 600; white-space: nowrap; }
+        a.cell-link { color: var(--text); font-weight: 600; text-decoration: none; }
+        a.cell-link.plain { font-weight: 500; }
+        a.cell-link:hover { color: var(--primary); }
+
+        .pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.15rem 0.6rem;
+            border-radius: 999px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+        .pill::before { content: ""; width: 0.45rem; height: 0.45rem; border-radius: 50%; background: currentColor; }
+        .pill.ok { background: var(--success-soft); color: var(--success); }
+        .pill.warn { background: var(--warn-soft); color: var(--warn); }
+        .pill.info { background: var(--primary-soft); color: var(--primary); }
+        .pill.bad { background: var(--danger-soft); color: var(--danger); }
+
+        /* Notices float under the header */
+        .message {
+            position: fixed;
+            top: 4.6rem;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 30;
+            width: min(560px, calc(100% - 32px));
+            padding: 0.8rem 1rem;
+            border-radius: 10px;
+            font-weight: 600;
+            box-shadow: 0 8px 28px rgba(23, 32, 50, 0.16);
+            border: 1px solid transparent;
+            animation: drop 0.2s ease-out;
+        }
+        .message.error { background: #fff; color: var(--danger); border-color: #f0c4bf; }
+        .message.success { background: #fff; color: var(--success); border-color: #bfe3cc; }
+        @keyframes drop { from { opacity: 0; transform: translate(-50%, -6px); } }
+
+        /* ---------- Login ---------- */
+        #login-view {
+            min-height: calc(100vh - 12rem);
+            display: grid;
+            place-items: center;
+        }
+        .login-card { width: min(400px, 100%); padding: 2rem; }
+        .login-card .brand-mark { width: 3rem; height: 3rem; border-radius: 12px; margin-bottom: 1.1rem; }
+        .login-card .brand-mark svg { width: 1.6rem; height: 1.6rem; }
+        .login-card h2 { font-size: 1.4rem; font-weight: 800; }
+        .login-card p { color: var(--muted); margin: 0.3rem 0 1.4rem; }
+        .login-card button { width: 100%; padding: 0.7rem; margin-top: 0.3rem; }
+
+        /* ---------- Teacher area: sidebar + pages ---------- */
+        #admin-view { display: grid; gap: 1.5rem; }
+        @media (min-width: 900px) {
+            #admin-view { grid-template-columns: 210px minmax(0, 1fr); align-items: start; }
+        }
+
+        .tabs { display: flex; gap: 0.3rem; overflow-x: auto; }
+        @media (min-width: 900px) {
+            .tabs {
+                flex-direction: column;
+                position: sticky;
+                top: 5rem;
+                background: var(--surface);
+                border: 1px solid var(--border);
+                border-radius: var(--radius);
+                box-shadow: var(--shadow);
+                padding: 0.5rem;
+            }
+        }
+        .tabs a {
+            display: flex;
+            align-items: center;
+            gap: 0.65rem;
+            padding: 0.6rem 0.8rem;
+            border-radius: 8px;
+            color: var(--muted);
+            text-decoration: none;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        .tabs a svg { width: 1.1rem; height: 1.1rem; flex: none; }
+        .tabs a:hover { background: var(--surface-2); color: var(--text); }
+        .tabs a.active { background: var(--primary-soft); color: var(--primary); }
+
+        .page { display: grid; gap: 1.1rem; align-content: start; }
+        .page-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 0.8rem; }
+        .page-head h2 { font-size: 1.45rem; font-weight: 800; letter-spacing: -0.015em; }
+        .page-head p { margin-top: 0.2rem; }
+
+        .facts { display: grid; gap: 0.85rem; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
+        .fact {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 0.9rem 1.1rem;
+        }
+        .fact .label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+        .fact .value { font-size: 1.5rem; font-weight: 800; font-variant-numeric: tabular-nums; margin-top: 0.15rem; }
+        .fact .value .pill { font-size: 0.85rem; vertical-align: middle; }
+
+        .form-card { max-width: 680px; }
+        .form-card > h2 { font-size: 1.2rem; }
+        .option-grid { display: grid; gap: 0.85rem; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+        .form-actions { display: flex; flex-wrap: wrap; gap: 0.8rem; align-items: center; padding-top: 0.3rem; }
+
+        .toolbar { display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center; }
+        .toolbar select { width: auto; min-width: 12rem; }
+
+        .assign-row { display: flex; flex-wrap: wrap; gap: 0.6rem; }
+        .assign-row select { flex: 1; min-width: 14rem; }
+
+        /* One student's answers */
+        .review { display: grid; gap: 0.85rem; }
+        .review-question { display: grid; gap: 0.55rem; }
+        .review-question h3 {
+            margin: 0 0 0.25rem;
+            font-size: 1rem;
+            display: flex;
+            gap: 0.75rem;
+            align-items: flex-start;
+            justify-content: space-between;
+        }
+        .review-option {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+            padding: 0.55rem 0.8rem;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+        }
+        .review-option > span:first-child { display: flex; align-items: center; gap: 0.65rem; }
+        .review-option.correct { border-color: #9fd3b4; background: var(--success-soft); }
+        .review-option.wrong { border-color: #f0b8b2; background: var(--danger-soft); }
+        .review-option .tag { font-size: 0.78rem; font-weight: 700; white-space: nowrap; }
         .review-option.correct .tag { color: var(--success); }
         .review-option.wrong .tag { color: var(--danger); }
+
+        /* ---------- Bubbles: the answer-sheet circles used for options ---------- */
+        .bubble {
+            width: 2rem;
+            height: 2rem;
+            border-radius: 50%;
+            border: 2px solid #c3cbd8;
+            display: grid;
+            place-items: center;
+            font-weight: 700;
+            font-size: 0.85rem;
+            color: var(--muted);
+            flex: none;
+            transition: background 0.15s, border-color 0.15s, color 0.15s;
+        }
+        .review-option .bubble { width: 1.7rem; height: 1.7rem; font-size: 0.78rem; }
+        .review-option.correct .bubble { border-color: var(--success); background: var(--success); color: #fff; }
+        .review-option.wrong .bubble { border-color: var(--danger); background: var(--danger); color: #fff; }
+
+        /* ---------- Student: exam list ---------- */
+        .exam-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+        .exam-card { display: grid; gap: 1.1rem; align-content: space-between; }
+        .exam-card h3 { margin: 0; font-size: 1.1rem; font-weight: 700; }
+        .exam-card .meta { color: var(--muted); font-size: 0.88rem; margin-top: 0.3rem; }
+        .exam-card button { width: 100%; }
+        .empty-state { text-align: center; padding: 2.5rem 1rem; color: var(--muted); grid-column: 1 / -1; }
+        .empty-state strong { display: block; color: var(--text); font-size: 1.05rem; margin-bottom: 0.25rem; }
+
+        /* ---------- Student: taking an exam ---------- */
+        .attempt-layout { display: grid; gap: 1.25rem; }
+        @media (min-width: 900px) {
+            .attempt-layout { grid-template-columns: minmax(0, 1fr) 290px; align-items: start; }
+            .sheet { position: sticky; top: 5rem; }
+        }
+
+        .question-card { padding: 1.6rem 1.75rem; }
+        #question-heading { font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: var(--primary); }
+        #question-body { font-size: 1.2rem; font-weight: 600; margin: 0.5rem 0 1.25rem; line-height: 1.45; }
+
+        #options { display: grid; gap: 0.65rem; margin-bottom: 1.4rem; }
+        .option {
+            position: relative;
+            display: flex;
+            align-items: center;
+            gap: 0.85rem;
+            padding: 0.8rem 1rem;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            font-size: 0.98rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: border-color 0.15s, background 0.15s;
+        }
+        .option input { position: absolute; opacity: 0; pointer-events: none; }
+        .option:hover { border-color: #b9c3f0; background: #fafbff; }
+        .option:hover .bubble { border-color: var(--primary); color: var(--primary); }
+        .option.selected { border-color: var(--primary); background: var(--primary-soft); }
+        .option.selected .bubble { background: var(--primary); border-color: var(--primary); color: #fff; }
+
+        .question-actions { display: flex; justify-content: space-between; gap: 0.6rem; }
+
+        .sheet h2 { font-size: 1rem; margin-bottom: 0.2rem; }
+        .progress { height: 0.5rem; background: var(--surface-2); border: 1px solid var(--border); border-radius: 999px; overflow: hidden; margin: 0.6rem 0 1rem; }
+        .progress span { display: block; height: 100%; width: 0; background: var(--primary); border-radius: 999px; transition: width 0.25s; }
+        #question-nav { display: grid; grid-template-columns: repeat(auto-fill, minmax(2.4rem, 1fr)); gap: 0.45rem; margin-bottom: 1.1rem; justify-items: center; }
+        #question-nav button {
+            width: 2.4rem;
+            height: 2.4rem;
+            padding: 0;
+            border-radius: 50%;
+            border: 2px solid #c3cbd8;
+            font-size: 0.85rem;
+            color: var(--muted);
+            background: var(--surface);
+        }
+        #question-nav button:hover { border-color: var(--primary); color: var(--primary); }
+        #question-nav button.answered { background: var(--primary); border-color: var(--primary); color: #fff; }
+        #question-nav button.current { box-shadow: 0 0 0 3px #b9c3f0; border-color: var(--primary); }
+        .legend { display: flex; gap: 1rem; font-size: 0.78rem; color: var(--muted); margin-bottom: 1rem; }
+        .legend span { display: inline-flex; align-items: center; gap: 0.35rem; }
+        .legend i { width: 0.75rem; height: 0.75rem; border-radius: 50%; border: 2px solid #c3cbd8; display: inline-block; }
+        .legend i.filled { background: var(--primary); border-color: var(--primary); }
+        .sheet .stack { display: grid; gap: 0.55rem; }
+        .sheet .stack button { width: 100%; }
+
+        /* ---------- Student: submitted ---------- */
+        .done-card { max-width: 480px; margin: 2.5rem auto; text-align: center; padding: 2.25rem 2rem; }
+        .done-icon {
+            width: 3.5rem;
+            height: 3.5rem;
+            border-radius: 50%;
+            background: var(--success-soft);
+            color: var(--success);
+            display: grid;
+            place-items: center;
+            margin: 0 auto 1rem;
+        }
+        .done-icon svg { width: 1.8rem; height: 1.8rem; }
+        .done-card .muted { margin: 0.35rem 0 1.4rem; }
+        .score { font-size: 1.35rem; font-weight: 800; margin-top: 0.4rem; }
+
+        @media (max-width: 560px) {
+            .user-chip .who { display: none; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after { transition: none !important; animation: none !important; }
+        }
     </style>
 </head>
 <body>
 
 <header>
-    <h1>Online Exam System</h1>
-    <div id="user-info" hidden>
-        <span id="user-name"></span>
-        <button id="logout-button" type="button">Log out</button>
+    <div class="brand">
+        <div class="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="6" cy="7" r="2.2"/><path d="M11 7h8"/>
+                <circle cx="6" cy="17" r="2.2" fill="#fff"/><path d="M11 17h8"/>
+            </svg>
+        </div>
+        <h1>Online Exam System</h1>
+    </div>
+    <div id="user-info" class="user-menu" hidden>
+        <button id="user-menu-button" class="user-chip" type="button" aria-haspopup="menu" aria-expanded="false" aria-controls="user-menu">
+            <span class="avatar" id="user-avatar" aria-hidden="true"></span>
+            <span class="who">
+                <span id="user-name"></span>
+                <span id="user-role"></span>
+            </span>
+            <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <div id="user-menu" class="menu" role="menu" hidden>
+            <button id="logout-button" type="button" role="menuitem">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"/><path d="M10 17l-5-5 5-5"/><path d="M5 12h11"/></svg>
+                Log out
+            </button>
+        </div>
     </div>
 </header>
 
 <main>
-    <p id="message" class="message" hidden></p>
+    <p id="message" class="message" role="status" hidden></p>
 
     <!-- Login -->
-    <section id="login-view" class="card" hidden>
-        <h2>Log in</h2>
-        <form id="login-form">
-            <label>Username <input id="login-username" required autocomplete="username"></label>
-            <label>Password <input id="login-password" type="password" required autocomplete="current-password"></label>
-            <button class="primary" type="submit">Log in</button>
-        </form>
+    <section id="login-view" hidden>
+        <div class="card login-card">
+            <div class="brand-mark" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="6" cy="7" r="2.2"/><path d="M11 7h8"/>
+                    <circle cx="6" cy="17" r="2.2" fill="#fff"/><path d="M11 17h8"/>
+                </svg>
+            </div>
+            <h2>Welcome back</h2>
+            <p>Sign in to take your exams or manage them.</p>
+            <form id="login-form">
+                <label>Username <input id="login-username" required autocomplete="username"></label>
+                <label>Password <input id="login-password" type="password" required autocomplete="current-password"></label>
+                <button class="primary" type="submit">Log in</button>
+            </form>
+        </div>
     </section>
 
-    <!-- Admin: one page is shown at a time, chosen by the URL hash (e.g. #/exams/3) -->
+    <!-- Teacher (admin): one page is shown at a time, chosen by the URL hash (e.g. #/exams/3) -->
     <section id="admin-view" hidden>
-        <nav class="tabs" aria-label="Admin sections">
-            <a href="#/exams" data-tab="exams">Exams</a>
-            <a href="#/questions" data-tab="questions">Questions</a>
-            <a href="#/students" data-tab="students">Students</a>
-            <a href="#/results" data-tab="results">Results</a>
+        <nav class="tabs" aria-label="Sections">
+            <a href="#/exams" data-tab="exams">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>
+                Exams
+            </a>
+            <a href="#/questions" data-tab="questions">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.6.3-1 .8-1 1.5V14"/><path d="M12 17.5h.01"/></svg>
+                Question Bank
+            </a>
+            <a href="#/students" data-tab="students">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14a6 6 0 0 1 3.5 6"/></svg>
+                Students
+            </a>
+            <a href="#/results" data-tab="results">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>
+                Results
+            </a>
         </nav>
 
-        <!-- Exams list -->
-        <div id="page-exams" class="page" hidden>
-            <div class="page-head">
-                <div>
-                    <h2>Exams</h2>
-                    <p class="muted">Open an exam to manage its question pool.</p>
-                </div>
-                <a class="button" href="#/exams/new">New exam</a>
-            </div>
-            <div class="card">
-                <table>
-                    <thead><tr><th>Title</th><th>Questions per student</th><th></th></tr></thead>
-                    <tbody id="exam-table"></tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- New / edit exam -->
-        <div id="page-exam-form" class="page" hidden>
-            <a class="back-link" id="exam-form-back" href="#/exams">← Back</a>
-            <div class="card form-card">
-                <h2 id="exam-form-title">New exam</h2>
-                <form id="exam-form">
-                    <input id="exam-id" type="hidden">
-                    <label>Title <input id="exam-title" required maxlength="100"></label>
-                    <label>Questions per student
-                        <input id="exam-num-questions" type="number" min="1" required>
-                    </label>
-                    <p class="muted" style="margin: 0">Each student gets this many questions, picked at random from the exam's pool.</p>
-                    <div class="row">
-                        <button class="primary" type="submit">Save exam</button>
-                        <a class="back-link" id="exam-form-cancel" href="#/exams">Cancel</a>
+        <div>
+            <!-- Exams list -->
+            <div id="page-exams" class="page" hidden>
+                <div class="page-head">
+                    <div>
+                        <h2>Exams</h2>
+                        <p class="muted">Open an exam to manage its question pool.</p>
                     </div>
-                </form>
-            </div>
-        </div>
-
-        <!-- One exam and its question pool -->
-        <div id="page-exam-detail" class="page" hidden>
-            <a class="back-link" href="#/exams">← All exams</a>
-            <div class="page-head">
-                <h2 id="exam-detail-title"></h2>
-                <div class="row">
-                    <a class="back-link" id="exam-detail-results" href="#/results">View results</a>
-                    <a class="button" id="exam-detail-edit" href="#/exams">Edit</a>
-                    <button id="exam-detail-delete" class="danger" type="button">Delete</button>
+                    <a class="button" href="#/exams/new">+ New exam</a>
                 </div>
-            </div>
-            <div class="facts">
-                <div class="fact"><div class="label">Questions per student</div><div class="value" id="exam-detail-per-student"></div></div>
-                <div class="fact"><div class="label">Questions in pool</div><div class="value" id="exam-detail-pool-size"></div></div>
-                <div class="fact"><div class="label">Status</div><div class="value"><span id="exam-detail-status" class="pill"></span></div></div>
-            </div>
-            <div class="card">
-                <h2>Question pool</h2>
-                <table>
-                    <thead><tr><th>Question</th><th>Answer</th><th></th></tr></thead>
-                    <tbody id="exam-detail-questions"></tbody>
-                </table>
-                <h3>Add a question to the pool</h3>
-                <form id="assign-form" class="row">
-                    <select id="assign-question" style="flex: 1; min-width: 14rem"></select>
-                    <button class="primary" type="submit" id="assign-button">Add</button>
-                </form>
-                <p id="assign-empty" class="muted" hidden>
-                    Every question is already in this exam. <a href="#/questions/new">Create a new question</a>.
-                </p>
-            </div>
-        </div>
-
-        <!-- Questions list -->
-        <div id="page-questions" class="page" hidden>
-            <div class="page-head">
-                <div>
-                    <h2>Questions</h2>
-                    <p class="muted">The question bank. Add questions to an exam from that exam's page.</p>
-                </div>
-                <a class="button" href="#/questions/new">New question</a>
-            </div>
-            <div class="card">
-                <table>
-                    <thead><tr><th>Question</th><th>Answer</th><th></th></tr></thead>
-                    <tbody id="question-table"></tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- New / edit question -->
-        <div id="page-question-form" class="page" hidden>
-            <a class="back-link" href="#/questions">← All questions</a>
-            <div class="card form-card">
-                <h2 id="question-form-title">New question</h2>
-                <form id="question-form">
-                    <input id="question-id" type="hidden">
-                    <label>Question <textarea id="question-text" required maxlength="1000"></textarea></label>
-                    <div class="option-grid">
-                        <label>Option A <input id="question-a" required maxlength="255"></label>
-                        <label>Option B <input id="question-b" required maxlength="255"></label>
-                        <label>Option C <input id="question-c" required maxlength="255"></label>
-                        <label>Option D <input id="question-d" required maxlength="255"></label>
+                <div class="card">
+                    <div class="table-wrap">
+                        <table>
+                            <thead><tr><th data-sort="text" aria-sort="none"><button type="button" class="sort">Title</button></th><th data-sort="number" aria-sort="none"><button type="button" class="sort">Questions per student</button></th><th></th></tr></thead>
+                            <tbody id="exam-table"></tbody>
+                        </table>
                     </div>
-                    <label>Correct answer
-                        <select id="question-correct" required style="max-width: 8rem">
-                            <option value="A">A</option>
-                            <option value="B">B</option>
-                            <option value="C">C</option>
-                            <option value="D">D</option>
-                        </select>
-                    </label>
-                    <div class="row">
-                        <button class="primary" type="submit">Save question</button>
-                        <a class="back-link" href="#/questions">Cancel</a>
+                </div>
+            </div>
+
+            <!-- New / edit exam -->
+            <div id="page-exam-form" class="page" hidden>
+                <a class="back-link" id="exam-form-back" href="#/exams">← Back</a>
+                <div class="card form-card">
+                    <h2 id="exam-form-title">New exam</h2>
+                    <form id="exam-form">
+                        <input id="exam-id" type="hidden">
+                        <label>Title <input id="exam-title" required maxlength="100" placeholder="e.g. Java Basics"></label>
+                        <label>Questions per student
+                            <input id="exam-num-questions" type="number" min="1" required placeholder="e.g. 10">
+                            <span class="hint">Each student gets this many questions, picked at random from the exam's pool.</span>
+                        </label>
+                        <div class="form-actions">
+                            <button class="primary" type="submit">Save exam</button>
+                            <a class="back-link" id="exam-form-cancel" href="#/exams">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- One exam and its question pool -->
+            <div id="page-exam-detail" class="page" hidden>
+                <a class="back-link" href="#/exams">← All exams</a>
+                <div class="page-head">
+                    <h2 id="exam-detail-title"></h2>
+                    <div class="toolbar">
+                        <a class="back-link" id="exam-detail-results" href="#/results">View results →</a>
+                        <a class="button" id="exam-detail-edit" href="#/exams">Edit</a>
+                        <button id="exam-detail-delete" class="danger" type="button">Delete</button>
                     </div>
-                </form>
-            </div>
-        </div>
-
-        <!-- Students list -->
-        <div id="page-students" class="page" hidden>
-            <div class="page-head">
-                <div>
-                    <h2>Students</h2>
-                    <p class="muted">Students log in with the username and password you give them.</p>
                 </div>
-                <a class="button" href="#/students/new">Add student</a>
-            </div>
-            <div class="card">
-                <table>
-                    <thead><tr><th>ID</th><th>Username</th></tr></thead>
-                    <tbody id="student-table"></tbody>
-                </table>
-            </div>
-        </div>
-
-        <!-- Add student -->
-        <div id="page-student-form" class="page" hidden>
-            <a class="back-link" href="#/students">← All students</a>
-            <div class="card form-card">
-                <h2>Add student</h2>
-                <form id="student-form">
-                    <label>Username <input id="student-username" required maxlength="50" autocomplete="off"></label>
-                    <label>Password <input id="student-password" type="password" required autocomplete="new-password"></label>
-                    <div class="row">
-                        <button class="primary" type="submit">Create student</button>
-                        <a class="back-link" href="#/students">Cancel</a>
+                <div class="facts">
+                    <div class="fact"><div class="label">Questions per student</div><div class="value" id="exam-detail-per-student"></div></div>
+                    <div class="fact"><div class="label">Questions in pool</div><div class="value" id="exam-detail-pool-size"></div></div>
+                    <div class="fact"><div class="label">Status</div><div class="value"><span id="exam-detail-status" class="pill"></span></div></div>
+                </div>
+                <div class="card">
+                    <h2>Add a question to the pool</h2>
+                    <form id="assign-form" class="assign-row">
+                        <select id="assign-question" aria-label="Question to add"></select>
+                        <button class="primary" type="submit" id="assign-button">Add to pool</button>
+                    </form>
+                    <p id="assign-empty" class="muted" hidden>
+                        Every question is already in this exam. <a href="#/questions/new">Create a new question</a>.
+                    </p>
+                </div>
+                <div class="card">
+                    <h2>Question pool</h2>
+                    <div class="table-wrap">
+                        <table>
+                            <thead><tr><th data-sort="text" aria-sort="none"><button type="button" class="sort">Question</button></th><th data-sort="text" aria-sort="none"><button type="button" class="sort">Answer</button></th><th></th></tr></thead>
+                            <tbody id="exam-detail-questions"></tbody>
+                        </table>
                     </div>
-                </form>
-            </div>
-        </div>
-
-        <!-- Results -->
-        <div id="page-results" class="page" hidden>
-            <div class="page-head">
-                <div>
-                    <h2>Results</h2>
-                    <p class="muted" id="result-summary"></p>
-                </div>
-                <div class="row">
-                    <label for="result-exam-filter" style="display: inline">Exam</label>
-                    <select id="result-exam-filter" style="width: auto"></select>
-                    <button id="refresh-results" type="button">Refresh</button>
                 </div>
             </div>
-            <div class="card">
-                <table>
-                    <thead><tr><th>Rank</th><th>Student</th><th>Exam</th><th>Score</th><th>Status</th><th></th></tr></thead>
-                    <tbody id="result-table"></tbody>
-                </table>
-            </div>
-        </div>
 
-        <!-- One student's answers -->
-        <div id="page-attempt" class="page" hidden>
-            <a class="back-link" id="attempt-review-back" href="#/results">← Results</a>
-            <div class="page-head">
-                <h2 id="attempt-review-title"></h2>
+            <!-- Questions list -->
+            <div id="page-questions" class="page" hidden>
+                <div class="page-head">
+                    <div>
+                        <h2>Question Bank</h2>
+                        <p class="muted">Every question you've written. Add questions to an exam from that exam's page.</p>
+                    </div>
+                    <a class="button" href="#/questions/new">+ New question</a>
+                </div>
+                <div class="card">
+                    <div class="table-wrap">
+                        <table>
+                            <thead><tr><th data-sort="text" aria-sort="none"><button type="button" class="sort">Question</button></th><th data-sort="text" aria-sort="none"><button type="button" class="sort">Answer</button></th><th></th></tr></thead>
+                            <tbody id="question-table"></tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
-            <div class="facts">
-                <div class="fact"><div class="label">Score</div><div class="value" id="attempt-review-score"></div></div>
-                <div class="fact"><div class="label">Rank</div><div class="value" id="attempt-review-rank"></div></div>
-                <div class="fact"><div class="label">Status</div><div class="value"><span id="attempt-review-status" class="pill"></span></div></div>
+
+            <!-- New / edit question -->
+            <div id="page-question-form" class="page" hidden>
+                <a class="back-link" href="#/questions">← Question Bank</a>
+                <div class="card form-card">
+                    <h2 id="question-form-title">New question</h2>
+                    <form id="question-form">
+                        <input id="question-id" type="hidden">
+                        <label>Question <textarea id="question-text" required maxlength="1000" placeholder="Type the question students will see"></textarea></label>
+                        <div class="option-grid">
+                            <label>Option A <input id="question-a" required maxlength="255"></label>
+                            <label>Option B <input id="question-b" required maxlength="255"></label>
+                            <label>Option C <input id="question-c" required maxlength="255"></label>
+                            <label>Option D <input id="question-d" required maxlength="255"></label>
+                        </div>
+                        <label>Correct answer
+                            <select id="question-correct" required style="max-width: 9rem">
+                                <option value="A">A</option>
+                                <option value="B">B</option>
+                                <option value="C">C</option>
+                                <option value="D">D</option>
+                            </select>
+                        </label>
+                        <div class="form-actions">
+                            <button class="primary" type="submit">Save question</button>
+                            <a class="back-link" href="#/questions">Cancel</a>
+                        </div>
+                    </form>
+                </div>
             </div>
-            <div class="review" id="attempt-review-answers"></div>
+
+            <!-- Students list -->
+            <div id="page-students" class="page" hidden>
+                <div class="page-head">
+                    <div>
+                        <h2>Students</h2>
+                        <p class="muted">Students log in with the username and password you give them.</p>
+                    </div>
+                    <a class="button" href="#/students/new">+ Add student</a>
+                </div>
+                <div class="card">
+                    <div class="table-wrap">
+                        <table>
+                            <thead><tr><th data-sort="number" aria-sort="none"><button type="button" class="sort">ID</button></th><th data-sort="text" aria-sort="none"><button type="button" class="sort">Username</button></th></tr></thead>
+                            <tbody id="student-table"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Add student -->
+            <div id="page-student-form" class="page" hidden>
+                <a class="back-link" href="#/students">← All students</a>
+                <div class="card form-card">
+                    <h2>Add student</h2>
+                    <form id="student-form">
+                        <label>Username <input id="student-username" required maxlength="50" autocomplete="off"></label>
+                        <label>Password <input id="student-password" type="password" required autocomplete="new-password"></label>
+                        <div class="form-actions">
+                            <button class="primary" type="submit">Create student</button>
+                            <a class="back-link" href="#/students">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Results / rank list -->
+            <div id="page-results" class="page" hidden>
+                <div class="page-head">
+                    <div>
+                        <h2>Results</h2>
+                        <p class="muted" id="result-summary"></p>
+                    </div>
+                    <div class="toolbar">
+                        <select id="result-exam-filter" aria-label="Filter by exam"></select>
+                        <button id="refresh-results" type="button">Refresh</button>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="table-wrap">
+                        <table>
+                            <thead><tr><th data-sort="number" aria-sort="none"><button type="button" class="sort">Rank</button></th><th data-sort="text" aria-sort="none"><button type="button" class="sort">Student</button></th><th data-sort="text" aria-sort="none"><button type="button" class="sort">Exam</button></th><th data-sort="number" aria-sort="none"><button type="button" class="sort">Score</button></th><th data-sort="text" aria-sort="none"><button type="button" class="sort">Status</button></th><th></th></tr></thead>
+                            <tbody id="result-table"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- One student's answers -->
+            <div id="page-attempt" class="page" hidden>
+                <a class="back-link" id="attempt-review-back" href="#/results">← Results</a>
+                <div class="page-head">
+                    <h2 id="attempt-review-title"></h2>
+                </div>
+                <div class="facts">
+                    <div class="fact"><div class="label">Score</div><div class="value" id="attempt-review-score"></div></div>
+                    <div class="fact"><div class="label">Rank</div><div class="value" id="attempt-review-rank"></div></div>
+                    <div class="fact"><div class="label">Status</div><div class="value"><span id="attempt-review-status" class="pill"></span></div></div>
+                </div>
+                <div class="review" id="attempt-review-answers"></div>
+            </div>
         </div>
     </section>
 
     <!-- Student: list of exams -->
-    <section id="student-view" class="card" hidden>
-        <h2>Your exams</h2>
-        <table>
-            <thead><tr><th>Exam</th><th>Questions</th><th></th></tr></thead>
-            <tbody id="student-exam-table"></tbody>
-        </table>
+    <section id="student-view" class="page" hidden>
+        <div class="page-head">
+            <div>
+                <h2>Your exams</h2>
+                <p class="muted">Pick an exam to start. Answers are saved as you go, so you can come back to an exam you've started.</p>
+            </div>
+        </div>
+        <div id="student-exam-list" class="exam-grid"></div>
     </section>
 
     <!-- Student: taking an exam -->
-    <section id="attempt-view" class="card" hidden>
-        <h2 id="attempt-title"></h2>
-        <p class="muted" id="attempt-progress"></p>
-        <div id="question-nav"></div>
-
-        <div id="question-panel" hidden>
-            <h3 id="question-heading"></h3>
-            <p id="question-body"></p>
-            <div id="options"></div>
-            <div class="row">
-                <button id="prev-question" type="button">Previous</button>
-                <button id="next-question" type="button">Next</button>
-            </div>
+    <section id="attempt-view" class="page" hidden>
+        <div class="page-head">
+            <h2 id="attempt-title"></h2>
         </div>
+        <div class="attempt-layout">
+            <div class="card question-card">
+                <div id="question-panel" hidden>
+                    <p id="question-heading"></p>
+                    <p id="question-body"></p>
+                    <div id="options"></div>
+                    <div class="question-actions">
+                        <button id="prev-question" type="button">← Previous</button>
+                        <button id="next-question" type="button">Next →</button>
+                    </div>
+                </div>
+            </div>
 
-        <div class="row" style="margin-top: 1.25rem">
-            <button id="back-to-exams" type="button">Back to exams</button>
-            <button id="close-exam" class="primary" type="button">Submit exam</button>
+            <aside class="card sheet" aria-label="Answer sheet">
+                <h2>Answer sheet</h2>
+                <p class="muted" id="attempt-progress"></p>
+                <div class="progress"><span id="attempt-progress-bar"></span></div>
+                <div id="question-nav"></div>
+                <div class="legend">
+                    <span><i class="filled"></i> Answered</span>
+                    <span><i></i> Not answered</span>
+                </div>
+                <div class="stack">
+                    <button id="close-exam" class="primary" type="button">Submit exam</button>
+                    <button id="back-to-exams" type="button">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>
+                        Pause exam
+                    </button>
+                    <p class="hint" style="text-align: center">Your answers are saved. You can continue later from your exams.</p>
+                </div>
+            </aside>
         </div>
     </section>
 
-    <!-- Student: result -->
-    <section id="result-view" class="card" hidden>
-        <h2 id="result-title"></h2>
-        <p class="score">Exam submitted</p>
-        <p class="muted">Your answers have been saved. This exam is now closed and cannot be taken again.</p>
-        <button id="result-back" type="button">Back to exams</button>
+    <!-- Student: submitted -->
+    <section id="result-view" hidden>
+        <div class="card done-card">
+            <div class="done-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>
+            </div>
+            <h2 id="result-title"></h2>
+            <p class="score">Exam submitted</p>
+            <p class="muted">Your answers have been saved. This exam is now closed and cannot be taken again.</p>
+            <button id="result-back" class="primary" type="button">Back to your exams</button>
+        </div>
     </section>
 </main>
 

@@ -19,15 +19,22 @@ function showView(id) {
     views.forEach((view) => ($(view).hidden = view !== id));
 }
 
+let messageTimer = null;
+
+// Shows a notice under the header. Success notices disappear after a few seconds; errors stay until the next action.
 function showMessage(text, type = "error") {
     const box = $("message");
     box.textContent = text;
     box.className = "message " + type;
     box.hidden = false;
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    clearTimeout(messageTimer);
+    if (type === "success") {
+        messageTimer = setTimeout(clearMessage, 4000);
+    }
 }
 
 function clearMessage() {
+    clearTimeout(messageTimer);
     $("message").hidden = true;
 }
 
@@ -52,6 +59,45 @@ function el(tag, attrs = {}, ...children) {
 function emptyRow(columns, text) {
     return el("tr", {}, el("td", { colspan: columns, class: "empty" }, text));
 }
+
+// ---------- Sortable tables ----------
+// Clicking a header marked data-sort="text" or data-sort="number" sorts its table by that column; clicking again reverses.
+// A cell can carry data-sort-value when its text isn't what it should sort by (e.g. "3 / 5" or "—").
+// The chosen column is remembered on the table, so the order survives when the page re-renders the rows.
+
+function sortRows(tbody) {
+    const table = tbody.closest("table");
+    if (table.dataset.sortCol === undefined) {
+        return; // keep the order the server sent until a header is clicked
+    }
+    const col = Number(table.dataset.sortCol);
+    const direction = table.dataset.sortDir === "descending" ? -1 : 1;
+    const numeric = table.tHead.rows[0].cells[col].dataset.sort === "number";
+    const value = (row) => row.cells[col].dataset.sortValue ?? row.cells[col].textContent.trim();
+
+    const rows = [...tbody.rows].filter((row) => row.cells.length > 1); // skip the "nothing here" row
+    rows.sort((a, b) => {
+        const x = value(a);
+        const y = value(b);
+        const order = numeric ? Number(x) - Number(y) : x.localeCompare(y, undefined, { numeric: true, sensitivity: "base" });
+        return order * direction;
+    });
+    tbody.append(...rows);
+}
+
+document.querySelectorAll("th[data-sort] button.sort").forEach((button) => {
+    button.addEventListener("click", () => {
+        const th = button.closest("th");
+        const table = th.closest("table");
+        const col = String(th.cellIndex);
+        const direction = table.dataset.sortCol === col && table.dataset.sortDir === "ascending" ? "descending" : "ascending";
+        table.dataset.sortCol = col;
+        table.dataset.sortDir = direction;
+        table.querySelectorAll("th[data-sort]").forEach((header) => header.setAttribute("aria-sort", "none"));
+        th.setAttribute("aria-sort", direction);
+        sortRows(table.tBodies[0]);
+    });
+});
 
 // Calls the API. Returns the parsed JSON (or null for empty responses) and throws an Error with a readable message otherwise.
 async function api(method, path, body) {
@@ -105,6 +151,8 @@ function handle(action) {
 async function startSession() {
     const me = await api("GET", "/api/me");
     $("user-name").textContent = me.username;
+    $("user-avatar").textContent = me.username.charAt(0);
+    $("user-role").textContent = me.roles.includes("ROLE_ADMIN") ? "Teacher" : "Student";
     $("user-info").hidden = false;
 
     if (me.roles.includes("ROLE_ADMIN")) {
@@ -142,7 +190,32 @@ $("login-form").addEventListener("submit", handle(async () => {
     await startSession();
 }));
 
+// User menu in the header: opens on click, closes on a second click, a click elsewhere or Escape
+function setUserMenu(open) {
+    $("user-menu").hidden = !open;
+    $("user-menu-button").setAttribute("aria-expanded", String(open));
+}
+
+$("user-menu-button").addEventListener("click", (event) => {
+    event.stopPropagation();
+    setUserMenu($("user-menu").hidden);
+});
+
+document.addEventListener("click", (event) => {
+    if (!$("user-menu").hidden && !$("user-info").contains(event.target)) {
+        setUserMenu(false);
+    }
+});
+
+document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && !$("user-menu").hidden) {
+        setUserMenu(false);
+        $("user-menu-button").focus();
+    }
+});
+
 $("logout-button").addEventListener("click", () => {
+    setUserMenu(false);
     clearMessage();
     logout();
 });
@@ -237,6 +310,7 @@ async function renderExams() {
             )
         ));
     }
+    sortRows(table);
 }
 
 async function renderExamForm(id) {
@@ -325,6 +399,7 @@ async function renderExamDetail(id) {
             )
         ));
     }
+    sortRows(table);
 
     // Only offer questions that aren't already in this exam
     const inPool = new Set(pool.map((q) => q.id));
@@ -370,6 +445,7 @@ async function renderQuestions() {
             )
         ));
     }
+    sortRows(table);
 }
 
 async function renderQuestionForm(id) {
@@ -432,9 +508,10 @@ async function renderStudents() {
     for (const student of students) {
         table.append(el("tr", {},
             el("td", { class: "num" }, String(student.id)),
-            el("td", {}, student.username)
+            el("td", { class: "strong" }, student.username)
         ));
     }
+    sortRows(table);
 }
 
 function renderStudentForm() {
@@ -488,11 +565,12 @@ async function renderResults(examId) {
     // Rows arrive grouped by exam with the best score first, so the order is already the rank list
     for (const result of rows) {
         table.append(el("tr", {},
-            el("td", { class: "rank" + (result.rank !== null && result.rank <= 3 ? " top" : "") },
+            // In-progress attempts have no rank or score: sort them after everyone who submitted
+            el("td", { class: "rank" + (result.rank !== null && result.rank <= 3 ? " top" : ""), "data-sort-value": result.rank === null ? 999999 : result.rank },
                 result.rank === null ? "—" : "#" + result.rank),
-            el("td", {}, result.username),
-            el("td", {}, el("a", { class: "cell-link", href: "#/exams/" + result.examId }, result.examTitle)),
-            el("td", { class: "num" }, result.open ? "—" : result.score + " / " + result.total),
+            el("td", { class: "strong" }, result.username),
+            el("td", {}, el("a", { class: "cell-link plain", href: "#/exams/" + result.examId }, result.examTitle)),
+            el("td", { class: "num", "data-sort-value": result.open ? -1 : result.score }, result.open ? "—" : result.score + " / " + result.total),
             el("td", {}, result.open
                 ? el("span", { class: "pill info" }, "In progress")
                 : el("span", { class: "pill ok" }, "Submitted")),
@@ -500,6 +578,7 @@ async function renderResults(examId) {
                 el("button", { class: "small", type: "button", onclick: () => navigate("#/attempts/" + result.attemptId) }, "View answers"))
         ));
     }
+    sortRows(table);
 }
 
 // ---------- Admin: one student's answers ----------
@@ -540,7 +619,7 @@ async function renderAttemptReview(attemptId) {
             else if (isCorrect) { cls += " correct"; tag = "Correct answer"; }
             else if (isChosen) { cls += " wrong"; tag = "Student's answer"; }
             card.append(el("div", { class: cls },
-                el("span", {}, el("strong", {}, letter + ". "), answer["option" + letter]),
+                el("span", {}, el("span", { class: "bubble" }, letter), answer["option" + letter]),
                 el("span", { class: "tag" }, tag)));
         }
         list.append(card);
@@ -558,19 +637,20 @@ async function showStudentExams() {
     attempt = null;
     showView("student-view");
     const exams = await api("GET", "/api/student/exam");
-    const table = $("student-exam-table");
-    table.replaceChildren();
+    const list = $("student-exam-list");
+    list.replaceChildren();
     if (exams.length === 0) {
-        table.append(emptyRow(3, "There are no exams for you to take right now."));
+        list.append(el("div", { class: "card empty-state" },
+            el("strong", {}, "No exams right now"),
+            "When your teacher opens an exam for you, it will appear here."));
     }
     for (const exam of exams) {
-        table.append(el("tr", {},
-            el("td", {}, exam.title),
-            el("td", {}, String(exam.numQuestions)),
-            el("td", { class: "actions" },
-                // Starting an exam that is already open just returns it, so this button also resumes
-                el("button", { class: "primary small", type: "button", onclick: handle(() => startExam(exam)) }, "Start / continue")
-            )
+        list.append(el("div", { class: "card exam-card" },
+            el("div", {},
+                el("h3", {}, exam.title),
+                el("p", { class: "meta" }, exam.numQuestions + (exam.numQuestions === 1 ? " question" : " questions") + " · multiple choice")),
+            // Starting an exam that is already open just returns it, so this button also resumes
+            el("button", { class: "primary", type: "button", onclick: handle(() => startExam(exam)) }, "Start / continue")
         ));
     }
 }
@@ -602,11 +682,12 @@ function renderAttempt() {
     const { questionIds, questions, currentIndex } = attempt;
     const answered = questionIds.filter((id) => questions[id].chosen).length;
     $("attempt-progress").textContent = answered + " of " + questionIds.length + " answered";
+    $("attempt-progress-bar").style.width = (questionIds.length ? (answered / questionIds.length) * 100 : 0) + "%";
 
     const nav = $("question-nav");
     nav.replaceChildren();
     questionIds.forEach((id, index) => {
-        const classes = ["small"];
+        const classes = [];
         if (questions[id].chosen) classes.push("answered");
         if (index === currentIndex) classes.push("current");
         nav.append(el("button", {
@@ -639,7 +720,8 @@ function renderAttempt() {
         input.checked = question.chosen === letter;
         options.append(el("label", { class: "option" + (input.checked ? " selected" : "") },
             input,
-            el("span", {}, el("strong", {}, letter + ". "), question["option" + letter])
+            el("span", { class: "bubble", "aria-hidden": "true" }, letter),
+            el("span", {}, question["option" + letter])
         ));
     }
 
@@ -661,7 +743,12 @@ async function answer(questionId, letter) {
 
 $("prev-question").addEventListener("click", () => goToQuestion(attempt.currentIndex - 1));
 $("next-question").addEventListener("click", () => goToQuestion(attempt.currentIndex + 1));
-$("back-to-exams").addEventListener("click", handle(showStudentExams));
+// Pausing just leaves the exam: every answer is already saved, and Start / continue picks it up again
+$("back-to-exams").addEventListener("click", handle(async () => {
+    const title = attempt.title;
+    await showStudentExams();
+    showMessage('"' + title + '" is paused. Use Start / continue to pick up where you left off.', "success");
+}));
 $("result-back").addEventListener("click", handle(showStudentExams));
 
 $("close-exam").addEventListener("click", handle(async () => {
